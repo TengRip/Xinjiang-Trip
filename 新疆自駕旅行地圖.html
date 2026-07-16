@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 北疆自駕遊專屬地圖與行程規劃</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Google Fonts - Noto Sans TC & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.3);
+            --danger-color: #f43f5e;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --sidebar-width: 450px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Sidebar Styling */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100%;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 4px 0 25px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .sidebar-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-header p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Scrollable Content */
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            scroll-behavior: smooth;
+        }
+
+        /* Modern Custom Scrollbar */
+        .sidebar-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar-content::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
+        }
+
+        /* Quick Info Cards */
+        .quick-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .info-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-color);
+        }
+
+        .info-card .value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 4px;
+        }
+
+        .info-card .label {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* 2026 Urgent Notice */
+        .alert-banner {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning-color);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .alert-banner h3 {
+            color: var(--warning-color);
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+        }
+
+        /* Timeline / Daily Cards */
+        .timeline-container {
+            position: relative;
+            padding-left: 16px;
+            border-left: 2px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .day-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .day-card::before {
+            content: '';
+            position: absolute;
+            left: -23px;
+            top: 24px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            border: 3px solid var(--bg-primary);
+            transition: all 0.3s;
+        }
+
+        .day-card.active {
+            background: rgba(56, 189, 248, 0.05);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.1);
+        }
+
+        .day-card.active::before {
+            background: var(--accent-color);
+            box-shadow: 0 0 8px var(--accent-color);
+            transform: scale(1.2);
+        }
+
+        .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .day-number {
+            font-size: 12px;
+            font-weight: 700;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .day-date {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .day-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .day-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed rgba(255,255,255,0.05);
+        }
+
+        .day-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .day-content {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .day-highlights {
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .day-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            font-size: 12px;
+            color: var(--text-secondary);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 8px;
+            padding-top: 8px;
+        }
+
+        .day-card.active .day-details {
+            max-height: 1000px;
+            transition: max-height 0.5s ease-in;
+        }
+
+        .detail-section {
+            margin-bottom: 10px;
+        }
+
+        .detail-title {
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .detail-bullet {
+            margin-left: 12px;
+            list-style-type: square;
+            margin-bottom: 4px;
+        }
+
+        /* 2026 Update tag */
+        .badge-2026 {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            margin-left: auto;
+        }
+
+        /* Map Container */
+        #map-container {
+            flex: 1;
+            position: relative;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background-color: #1e293b;
+        }
+
+        /* Custom Map Controls */
+        .map-layer-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 8px;
+            display: flex;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .layer-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .layer-btn.active {
+            background: var(--accent-color);
+            color: var(--bg-primary);
+            font-weight: 700;
+        }
+
+        /* Floating Utilities Panel */
+        .utilities-toggle-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--accent-color);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        .utilities-toggle-btn:hover {
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        .utilities-panel {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            z-index: 1000;
+            width: 320px;
+            background: var(--bg-secondary);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none;
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .utilities-panel h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            color: var(--accent-color);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .utilities-panel .close-btn {
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .utility-tab-content {
+            font-size: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .utility-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding: 6px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 6px;
+        }
+
+        /* Marker Styling */
+        .custom-div-icon {
+            background: none;
+            border: none;
+        }
+
+        .marker-pin {
+            width: 30px;
+            height: 30px;
+            border-radius: 50% 50% 50% 0;
+            background: var(--accent-color);
+            position: absolute;
+            transform: rotate(-45deg);
+            left: 50%;
+            top: 50%;
+            margin: -15px 0 0 -15px;
+            box-shadow: -2px 2px 4px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            transition: all 0.2s;
+        }
+
+        .marker-pin::after {
+            content: '';
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--bg-primary);
+            position: absolute;
+        }
+
+        .marker-icon-inner {
+            z-index: 10;
+            color: #fff;
+            transform: rotate(45deg);
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .marker-pin.active {
+            background: var(--danger-color);
+            width: 36px;
+            height: 36px;
+            margin: -18px 0 0 -18px;
+            box-shadow: 0 0 10px var(--danger-color);
+        }
+
+        .marker-pin.active::after {
+            width: 16px;
+            height: 16px;
+        }
+
+        .marker-pulse {
+            position: absolute;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            height: 40px;
+            width: 40px;
+            left: 50%;
+            top: 50%;
+            margin: -20px 0 0 -20px;
+            animation: pulse 1.5s ease-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        /* Popup Custom Styling */
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-secondary) !important;
+            backdrop-filter: blur(12px);
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color);
+            border-radius: 12px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(30, 41, 59, 0.9) !important;
+        }
+
+        .popup-title {
+            font-weight: 700;
+            color: var(--accent-color);
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .popup-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column-reverse;
+            }
+            #sidebar {
+                width: 100%;
+                height: 45vh;
+            }
+            #map-container {
+                height: 55vh;
+            }
+        }
+
+        .print-btn {
+            margin-top: 12px;
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+        .print-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+            filter: brightness(1.1);
+        }
+
+        /* Scheme Selector Toggle styling */
+        .scheme-toggle {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .scheme-btn {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .scheme-btn.active {
+            background: var(--accent-color);
+            color: var(--bg-primary);
+            font-weight: 700;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
+            }
+            #sidebar {
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                box-shadow: none !important;
+                border-right: none !important;
+                display: block !important;
+                backdrop-filter: none !important;
+            }
+            #map-container, .map-layer-toggle, .utilities-toggle-btn, .utilities-panel, .print-btn, .badge-2026, .scheme-toggle {
+                display: none !important;
+            }
+            .sidebar-content {
+                overflow-y: visible !important;
+                padding: 0 !important;
+            }
+            .day-card {
+                page-break-inside: avoid !important;
+                background: white !important;
+                border: 1px solid #ddd !important;
+                color: black !important;
+                margin-bottom: 20px !important;
+                opacity: 1 !important;
+            }
+            .day-card::before {
+                display: none !important;
+            }
+            .day-details {
+                max-height: none !important;
+                display: block !important;
+                color: #333 !important;
+                border-top: 1px solid #eee !important;
+                margin-top: 10px !important;
+                padding-top: 10px !important;
+                opacity: 1 !important;
+            }
+            .day-title, .day-number, .detail-title {
+                color: #1e293b !important;
+            }
+            .quick-info, .alert-banner {
+                page-break-inside: avoid !important;
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+                color: black !important;
+            }
+            .info-card {
+                background: #f8fafc !important;
+                border: 1px solid #e2e8f0 !important;
+            }
+            .info-card .value {
+                color: #0f172a !important;
+            }
+            .info-card .label {
+                color: #475569 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Itinerary & Notes -->
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h1>2026 北疆自駕深度遊</h1>
+            <p>9月2日 － 9月12日 專屬互動行程地圖</p>
+            <button class="print-btn" onclick="window.print()">🖨️ 匯出 PDF 行程表 / 列印紙本</button>
+        </div>
+
+        <div class="sidebar-content">
+            <!-- Travel statistics -->
+            <div class="quick-info">
+                <div class="info-card">
+                    <div class="value">~2,200 km</div>
+                    <div class="label">預估自駕總里程</div>
+                </div>
+                <div class="info-card">
+                    <div class="value">~38 hrs</div>
+                    <div class="label">預估純開車時間</div>
+                </div>
+            </div>
+
+            <!-- Urgent 2026 July Information Banner -->
+            <div class="alert-banner">
+                <h3>⚠️ 2026年7月最新自駕管制要點</h3>
+                <p><strong>1. 獨庫公路北段預約制：</strong>2026年6月25日起正式實行線上預約！需透過「游新疆一碼游」微信小程序預約入口與時段，未預約車輛將在獨山子驛站/那拉提入口被勸返。</p>
+                <p style="margin-top: 6px;"><strong>2. 晝通夜封：</strong>因G3033高速與伊阿鐵路施工，獨庫公路實行「晝保通行、夜保施工」，通行時間為 08:00 - 19:00（部分路段彈性至21:00）。</p>
+                <p style="margin-top: 6px;"><strong>3. 車型嚴格限制：</strong>全線僅限7座及以下客車、5噸及以下輕型貨車。禁止大巴、拖掛式房車進入。</p>
+                <p style="margin-top: 6px;"><strong>4. 喀納斯/禾木預約：</strong>旺季禁止私家車駛入景區，車需停賈登峪/禾木停車場，換乘區間車。每日限流，須提前2-3天在「原行網」預約門票。</p>
+            </div>
+
+            <!-- Scheme Selector Toggle -->
+            <div class="scheme-toggle">
+                <button id="scheme-a-btn" class="scheme-btn active" onclick="switchScheme('A')">方案 A (主案：過夜克拉瑪依)</button>
+                <button id="scheme-b-btn" class="scheme-btn" onclick="switchScheme('B')">方案 B (備案：直奔布爾津)</button>
+            </div>
+
+            <!-- Day-by-Day Timeline -->
+            <div class="timeline-container" id="timeline">
+                
+                <!-- Day 1 -->
+                <div class="day-card active" data-day="1" onclick="focusDay(1)">
+                    <div class="day-header">
+                        <span class="day-number">Day 1</span>
+                        <span class="day-date">9/2 (三)</span>
+                    </div>
+                    <div class="day-title">抵達烏魯木齊 ｜ 入住休息</div>
+                    <div class="day-meta">
+                        <span>📍 烏魯木齊</span>
+                        <span>🚗 -</span>
+                        <span>⏱️ -</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">凌晨班機抵達烏魯木齊地窩堡機場，入住市區酒店休息，調適時差與體力。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">💡 2026 貼心提示：</div>
+                                <div class="detail-bullet">下機後可直接在機場打車或預約接機前往市區，建議入住靠近中山路或大巴扎附近的酒店，生活機能佳。</div>
+                                <div class="detail-bullet">辦理入住時，<strong>務必向酒店前台索取「臨時住宿登記表」並蓋公章</strong>（台灣人申辦臨時駕照必備資料）。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 2 -->
+                <div class="day-card" data-day="2" onclick="focusDay(2)">
+                    <div class="day-header">
+                        <span class="day-number">Day 2</span>
+                        <span class="day-date">9/3 (四)</span>
+                        <span class="badge-2026">最新申辦</span>
+                    </div>
+                    <div class="day-title">辦臨時駕照 → 機場取車 → 採買</div>
+                    <div class="day-meta">
+                        <span>📍 烏魯木齊市區 / 地窩堡機場</span>
+                        <span>🚗 市區</span>
+                        <span>⏱️ 彈性</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">前往車管所辦理臨時駕駛許可，隨後前往機場取車並採買自駕物資。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">📋 台灣人換照流程與必備資料：</div>
+                                <div class="detail-bullet"><strong>辦理地點：</strong>烏魯木齊市車管所境外換證窗口（建議提前在「新疆警保服務平台」微信小程序預約）。</div>
+                                <div class="detail-bullet"><strong>必備證件：</strong>台胞證正本、台灣汽車駕照正本、臨時住宿登記表（紙質蓋章版）、一吋白底照片2張。</div>
+                                <div class="detail-bullet"><strong>辦理手續：</strong>免筆試與路試，需配合窗口進行大約30分鐘的交通安全法規學習，繳納小額工本費後即可當場領取「臨時機動車駕駛許可」。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">🚗 機場取車備註：</div>
+                                <div class="detail-bullet">本行程規劃直接於**地窩堡機場租車中心**取車。辦妥臨時駕照後，可搭乘地鐵或計程車返回機場取車，隨後開往市區的大型超市（如家樂福、大潤發）採買自駕物資，行車路線與時間配置最為順暢。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">🛒 採買自駕物資清單：</div>
+                                <div class="detail-bullet">瓶裝水（至少兩箱）、高熱量零食（牛肉乾、堅果、巧克力）、保溫瓶、車載手機支架、點菸器車充、垃圾袋。</div>
+                                <div class="detail-bullet">新疆氣候乾燥，護唇膏、保濕乳液、防曬乳是必需品。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 3 -->
+                <div class="day-card" data-day="3" onclick="focusDay(3)">
+                    <div class="day-header">
+                        <span class="day-number">Day 3</span>
+                        <span class="day-date">9/4 (五)</span>
+                        <span class="badge-2026">限流預約</span>
+                    </div>
+                    <div class="day-title">烏魯木齊 → 獨庫公路北段 → 那拉提</div>
+                    <div class="day-meta">
+                        <span>📍 烏魯木齊 -> 獨山子 -> 喬爾瑪 -> 那拉提</span>
+                        <span>🚗 440 km</span>
+                        <span>⏱️ ~8.5 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">穿越天山脊梁！從獨山子駛入「英雄之路」獨庫公路，傍晚抵達那拉提。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">⚠️ 2026 獨庫公路北段通行新政：</div>
+                                <div class="detail-bullet"><strong>必須預約：</strong>需提早在「游新疆一碼游」小程序預約「獨山子驛站入口」，並在預約時段內進入。</div>
+                                <div class="detail-bullet"><strong>時間管制：</strong>08:00 - 19:00 開放，建議清晨 06:30 從烏魯木齊出發，經 G30 連霍高速於 09:30 抵達獨山子開始排隊進山。</div>
+                                <div class="detail-bullet"><strong>路況與景點：</strong>北段為全線最險峻、風景最壯麗路段，翻越哈希勒根達坂（海拔3400m，有雪牆冰川），途經防雪走廊。中午可在「喬爾瑪」休息、吃拌麵並參觀烈士陵園。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 4 -->
+                <div class="day-card" data-day="4" onclick="focusDay(4)">
+                    <div class="day-header">
+                        <span class="day-number">Day 4</span>
+                        <span class="day-date">9/5 (六)</span>
+                    </div>
+                    <div class="day-title">那拉提草原全天（空中草原 / 河谷草原）</div>
+                    <div class="day-meta">
+                        <span>📍 那拉提景區</span>
+                        <span>🚗 景區接駁</span>
+                        <span>⏱️ 輕鬆</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">全天悠遊那拉提。推薦經典「空中草原」路線，感受雪山下的綠茵奇蹟。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">🏞️ 景區遊玩攻略：</div>
+                                <div class="detail-bullet"><strong>路線選擇：</strong>空中草原（精華，高海拔草甸、背景為雪山連綿，適合拍大片，推薦搭區間車至遊牧人家，再騎馬至雪蓮谷）；河谷草原（林地、小溪、牛羊成群，海拔較低）。</div>
+                                <div class="detail-bullet"><strong>2026 自駕規定：</strong>那拉提景區一般禁止外來私家車駛入核心區（偶有天價自駕票，但不划算），一律需搭乘景區區間車。</div>
+                                <div class="detail-bullet"><strong>衣物穿搭：</strong>草原風大、紫外線強，且雪蓮谷海拔高，務必攜帶防風衝鋒衣或保暖外套。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 5 -->
+                <div class="day-card" data-day="5" onclick="focusDay(5)">
+                    <div class="day-header">
+                        <span class="day-number">Day 5</span>
+                        <span class="day-date">9/6 (日)</span>
+                    </div>
+                    <div class="day-title">那拉提 → 伊寧市 → 賽里木湖</div>
+                    <div class="day-meta">
+                        <span>📍 那拉提 -> 伊寧 -> 果子溝大橋 -> 賽里木湖</span>
+                        <span>🚗 340 km</span>
+                        <span>⏱️ ~5.5 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">途經伊犁首府伊寧市補給，跨越果子溝大橋，抵達「大西洋最後一滴眼淚」賽里木湖。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">🚗 行程優化與行車路線：</div>
+                                <div class="detail-bullet">上午經 G218 與 G3016 快速行駛至伊寧市（車程約3小時），可在伊寧「六星街」或「喀贊其」享用午餐，體驗維吾爾族風情。</div>
+                                <div class="detail-bullet">下午走 G30 連霍高速北上，穿過極具震撼力的<strong>果子溝大橋</strong>，可於大橋觀景台安全處遠眺拍照。</div>
+                                <div class="detail-bullet">傍晚抵達賽里木湖（通常從南門或東門進入）。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">🌊 賽里木湖環湖指南：</div>
+                                <div class="detail-bullet"><strong>自駕政策：</strong>賽里木湖允許私家車環湖（需購買車輛自駕票，約143 RMB/人）。環湖公路全長 90 km，路況極好，限速較多。</div>
+                                <div class="detail-bullet"><strong>打卡點：</strong>松樹頭（登高俯瞰）、天鵝樂園（觀天鵝）、克勒湧珠（拍日落與水草）、西海草原。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 6 (Scheme A) -->
+                <div class="day-card scheme-a-card" data-day="6" onclick="focusDay(6)">
+                    <div class="day-header">
+                        <span class="day-number">Day 6 (方案 A)</span>
+                        <span class="day-date">9/7 (一)</span>
+                    </div>
+                    <div class="day-title">賽里木湖 → 奎屯 → 克拉瑪依</div>
+                    <div class="day-meta">
+                        <span>📍 賽里木湖 -> 奎屯 -> 克拉瑪依</span>
+                        <span>🚗 450 km</span>
+                        <span>⏱️ ~6 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">告別高山湖泊，一路向東穿越天山北坡，進入準噶爾盆地的石油之城克拉瑪依。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">📍 沿途看點與路況：</div>
+                                <div class="detail-bullet">自賽里木湖出發走 G30 連霍高速下山，行經奎屯市，中午可在此享用新疆大盤雞補給。</div>
+                                <div class="detail-bullet">由奎屯轉入 G3014 奎阿高速向北，兩側風景將由山地針葉林轉變為無垠的戈壁荒漠。</div>
+                                <div class="detail-bullet">接近克拉瑪依時，公路兩側將出現無數正在工作的石油「磕頭機」（抽油機）。</div>
+                                <div class="detail-bullet">⛽ **加油指南：** 出發前於賽里木湖服務區加滿，中途在奎屯服務區或克拉瑪依加油站補給。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 6 (Scheme B - 備案) -->
+                <div class="day-card scheme-b-card" data-day="6" onclick="focusDay(6)" style="display: none;">
+                    <div class="day-header">
+                        <span class="day-number">Day 6 (方案 B - 備案)</span>
+                        <span class="day-date">9/7 (一)</span>
+                        <span class="badge-2026" style="background: rgba(56, 189, 248, 0.15); color: var(--accent-color); border: 1px solid rgba(56, 189, 248, 0.3);">自駕＋五彩灘日落</span>
+                    </div>
+                    <div class="day-title">賽里木湖 → 奎屯 → 五彩灘夕陽 → 布爾津</div>
+                    <div class="day-meta">
+                        <span>📍 賽里木湖 -> 奎屯 -> 五彩灘 -> 布爾津</span>
+                        <span>🚗 770 km</span>
+                        <span>⏱️ ~8.5 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">一日長途自駕！上午從賽里木湖出發，沿高速公路一路北上，傍晚直奔五彩灘欣賞經典額爾齊斯河落日，隨後入住布爾津。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">💡 行程調整說明：</div>
+                                <div class="detail-bullet">本行程**已移除烏爾禾世界魔鬼城景點**，將下午的觀光焦點留給最精華的**五彩灘落日**。這使得白天的時間大為充裕，早上可延後至 09:30 輕鬆出發，行車步調更為安全放鬆。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">🌅 五彩灘日落攻略：</div>
+                                <div class="detail-bullet"><strong>9月7日日落時間：</strong> 約北京時間 **20:30 - 20:45**（夕陽餘暉渲染雅丹岩層呈紅黃紫多色，是最佳拍照時段）。</div>
+                                <div class="detail-bullet"><strong>建議抵達時間：</strong> 約北京時間 **19:00 - 19:30** 之間（預留時間入園並走至河畔觀景台）。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">⏱️ 當日行程時間估算表 (建議 09:30 出發)：</div>
+                                <div class="detail-bullet"><strong>09:30 - 13:00 🚗 賽里木湖 ➡️ 奎屯 (310 km / ~3.5小時)</strong>：上午出發沿高速下山，過果子溝大橋。</div>
+                                <div class="detail-bullet"><strong>13:00 - 14:30 🍴 奎屯市區 (休息 & 午餐 & 加油 / ~1.5小時)</strong>：在奎屯用餐，並將油箱加滿。</div>
+                                <div class="detail-bullet"><strong>14:30 - 19:00 🚗 奎屯 ➡️ 五彩灘 (440 km / ~4.5小時)</strong>：沿奎阿高速北上，中途於和什托洛蓋服務區休息。直接導航去五彩灘（五彩灘在布爾津西北24km），不進布爾津縣城。</div>
+                                <div class="detail-bullet"><strong>19:00 - 21:00 📸 五彩灘落日 (遊覽 / ~2小時)</strong>：漫步觀景台，欣賞落日與對岸金色胡楊林。</div>
+                                <div class="detail-bullet"><strong>21:00 - 21:30 🚗 五彩灘 ➡️ 布爾津縣城 (24 km / ~30分鐘)</strong>：前往布爾津酒店辦理入住。</div>
+                                <div class="detail-bullet"><strong>21:30 - 23:00 🍢 布爾津夜市 (慶功晚宴 / ~1.5小時)</strong>：享用烤冷水魚（狗魚）與羊肉串。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">⛽ 加油站指引：</div>
+                                <div class="detail-bullet">出發前於賽里木湖加滿。中途在奎屯服務區或和什托洛蓋服務區加滿。**抵達布爾津後必須再次加滿**以備明日進山。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 7 (Scheme A) -->
+                <div class="day-card scheme-a-card" data-day="7" onclick="focusDay(7)">
+                    <div class="day-header">
+                        <span class="day-number">Day 7 (方案 A)</span>
+                        <span class="day-date">9/8 (二)</span>
+                        <span class="badge-2026" style="background: rgba(56, 189, 248, 0.15); color: var(--accent-color); border: 1px solid rgba(56, 189, 248, 0.3);">自駕段</span>
+                    </div>
+                    <div class="day-title">克拉瑪依 → 布爾津 → 禾木</div>
+                    <div class="day-meta">
+                        <span>📍 克拉瑪依 -> 布爾津 -> 禾木</span>
+                        <span>🚗 480 km</span>
+                        <span>⏱️ ~7.5 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">北上阿勒泰山！中途於布爾津享用午餐並加滿油，隨後經 S232 盤山路駛入林海雪山，抵達木屋之鄉禾木。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">💡 行程調整說明：</div>
+                                <div class="detail-bullet">本行程**已移除烏爾禾世界魔鬼城景點**，使得當天的自駕步調更加從容，避免因景區步行與搭小火車（需花費2-3小時）造成深夜走山路的危險。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">⏱️ 當日行程時間估算表 (建議 09:30 出發)：</div>
+                                <div class="detail-bullet"><strong>09:30 - 13:00 🚗 克拉瑪依 ➡️ 布爾津 (300 km / ~3.5小時)</strong>：上午出發沿奎阿高速北上，沿途為遼闊戈壁，車流平順。</div>
+                                <div class="detail-bullet"><strong>13:00 - 14:30 🍴 布爾津縣城 (休息 & 午餐 & 加油 / ~1.5小時)</strong>：於縣城餐廳用餐。**請務必在布爾津縣城加滿油！**</div>
+                                <div class="detail-bullet"><strong>14:30 - 18:00 🚗 布爾津 ➡️ 禾木 (180 km / ~3.5小時)</strong>：經 S232 省道進山。山路多彎限速嚴格，部分山谷無訊號，請專注駕駛。</div>
+                                <div class="detail-bullet"><strong>18:00 抵達 🌲 禾木景區大門</strong>：將車輛停在景區山外停車場，攜帶隨身行李搭乘景區區間車（約 40 分鐘）進入禾木村內民宿，正好可以悠閒散步看村落日落與晚霞。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">⛽ 加油指南：</div>
+                                <div class="detail-bullet">克拉瑪依出發前加滿。中途在和什托洛蓋服務區或布爾津縣城加滿。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 7 (Scheme B - 備案) -->
+                <div class="day-card scheme-b-card" data-day="7" onclick="focusDay(7)" style="display: none;">
+                    <div class="day-header">
+                        <span class="day-number">Day 7 (方案 B - 備案)</span>
+                        <span class="day-date">9/8 (二)</span>
+                        <span class="badge-2026" style="background: rgba(16, 185, 129, 0.15); color: var(--success-color); border: 1px solid rgba(16, 185, 129, 0.3);">極為輕鬆</span>
+                    </div>
+                    <div class="day-title">布爾津 → 衝乎爾 → 禾木</div>
+                    <div class="day-meta">
+                        <span>📍 布爾津 -> 衝乎爾 -> 禾木</span>
+                        <span>🚗 180 km</span>
+                        <span>⏱️ ~3.5 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">行程極為舒適！上午可在布爾津風情小鎮輕鬆採買，午後開車沿 S232 盤山公路北上，輕鬆抵達仙境禾木。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">🏞️ 輕鬆慢遊規劃：</div>
+                                <div class="detail-bullet">由於前一天完成了 750 公里長途行車，今天您可以睡到自然醒。上午可在布爾津享用早餐，逛逛充滿異國情調的俄羅斯風情街，並在當地的超市補充山區物資與水果。</div>
+                                <div class="detail-bullet"><strong>下午進山：</strong> 13:30 從布爾津出發，經 S232 山路盤山而上。山區景色優美，途中會經過衝乎爾小鎮。預計 17:00 抵達禾木門票站，換乘區間車進村，正好可以好整以暇地觀看村落晚霞。</div>
+                                <div class="detail-bullet">⛽ **加油指南：** **出發前務必在布爾津縣城再次補滿油**。中途可在衝乎爾加油站或禾木入口加油站補給。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 8 -->
+                <div class="day-card" data-day="8" onclick="focusDay(8)">
+                    <div class="day-header">
+                        <span class="day-number">Day 8</span>
+                        <span class="day-date">9/9 (三)</span>
+                        <span class="badge-2026">必看晨霧</span>
+                    </div>
+                    <div class="day-title">禾木晨霧 → 喀納斯（賈登峪）</div>
+                    <div class="day-meta">
+                        <span>📍 禾木 -> 賈登峪 (喀納斯門戶)</span>
+                        <span>🚗 60 km</span>
+                        <span>⏱️ ~1.5 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">清晨登觀景台俯瞰「禾木晨霧」，午後驅車前往喀納斯風景區門戶賈登峪。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">🌄 禾木晨霧觀賞攻略：</div>
+                                <div class="detail-bullet">清晨 06:30 需起床，搭乘村內接駁車或步行前往哈登平台（步行約30-40分鐘）。</div>
+                                <div class="detail-bullet">9 月初清晨溫度常接近 0°C，<strong>必須穿羽絨衣或厚衝鋒衣</strong>。靜待陽光灑在圖瓦小木屋與裊裊晨霧中，如夢似幻。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">🚗 前往喀納斯：</div>
+                                <div class="detail-bullet">中午出發，驅車由禾木經山路行駛至賈登峪（約60公里，車程1.5小時）。</div>
+                                <div class="detail-bullet">抵達賈登峪後，將私家車停在遊客中心停車場，換乘區間車進入喀納斯景區（車程約1小時），入住景區內民宿或返回賈登峪住宿。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 9 -->
+                <div class="day-card" data-day="9" onclick="focusDay(9)">
+                    <div class="day-header">
+                        <span class="day-number">Day 9</span>
+                        <span class="day-date">9/10 (四)</span>
+                    </div>
+                    <div class="day-title">喀納斯半天遊覽 → 阿勒泰市</div>
+                    <div class="day-meta">
+                        <span>📍 喀納斯 (賈登峪) -> 布爾津 -> 阿勒泰市</span>
+                        <span>🚗 280 km</span>
+                        <span>⏱️ ~5.5 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">遊覽喀納斯經典三灣，午後出山經布爾津，抵達阿勒泰市。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">🏞️ 喀納斯半日遊玩要點：</div>
+                                <div class="detail-bullet"><strong>喀納斯三灣：</strong>神仙灣、月亮灣、臥龍灣。建議乘坐下山區間車時，在神仙灣或月亮灣下車，沿木棧道徒步至臥龍灣（約 3-4 公里，平緩好走，風景絕佳）。</div>
+                                <div class="detail-bullet">若體力好，可一早先登<strong>觀魚台</strong>，俯瞰喀納斯湖全景（需另購觀魚台區間車票）。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">🚗 下山至阿勒泰市：</div>
+                                <div class="detail-bullet">下午 14:30 前回到賈登峪取車出發，沿山路開往布爾津，再轉向阿勒泰市。山路限速多，開車請保持專注。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 10 -->
+                <div class="day-card" data-day="10" onclick="focusDay(10)">
+                    <div class="day-header">
+                        <span class="day-number">Day 10</span>
+                        <span class="day-date">9/11 (五)</span>
+                        <span class="badge-2026">沙漠高速</span>
+                    </div>
+                    <div class="day-title">阿勒泰市 → S21 沙漠公路 → 烏魯木齊（機場還車）</div>
+                    <div class="day-meta">
+                        <span>📍 阿勒泰 -> 古爾班通古特沙漠 -> 五家渠 -> 烏魯木齊</span>
+                        <span>🚗 340 km</span>
+                        <span>⏱️ ~5 hrs</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">體驗新疆最美沙漠高速 S21，縱穿古爾班通古特沙漠，返回烏魯木齊並直接於地窩堡機場還車。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">🏜️ S21 阿烏高速自駕攻略：</div>
+                                <div class="detail-bullet">這是中國首條沙漠高速公路，路況極佳，筆直平坦，限速 120 km/h，穿越浩瀚的古爾班通古特沙漠。</div>
+                                <div class="detail-bullet"><strong>必停服務區：</strong>「克拉美麗服務區」，這裡有大型沙漠雕塑，可由停車場步行進入沙丘體驗大漠風光。</div>
+                            </div>
+                            <div class="detail-section">
+                                <div class="detail-title">🚗 機場還車與後續安排：</div>
+                                <div class="detail-bullet">下午自 S21 高速抵達烏魯木齊後，**直接開往地窩堡機場租車中心辦理還車**，免去市區塞車與尋找停車位之苦。</div>
+                                <div class="detail-bullet">還車並寄放行李後，可搭乘便捷的地鐵1號線輕鬆前往國際大巴扎採購伴手禮、吃烤肉享用慶功宴。</div>
+                                <div class="detail-bullet">深夜再搭乘地鐵或計程車返回機場辦理返台登機手續。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Day 11 -->
+                <div class="day-card" data-day="11" onclick="focusDay(11)">
+                    <div class="day-header">
+                        <span class="day-number">Day 11</span>
+                        <span class="day-date">9/12 (六)</span>
+                    </div>
+                    <div class="day-title">烏魯木齊地窩堡機場 ✈️ 返台</div>
+                    <div class="day-meta">
+                        <span>📍 烏魯木齊 ✈️ 台灣</span>
+                        <span>🚗 飛機</span>
+                        <span>⏱️ -</span>
+                    </div>
+                    <div class="day-content">
+                        <div class="day-highlights">凌晨搭乘航班，經中轉返回台灣，結束精彩的北疆自駕之旅。</div>
+                        <div class="day-details">
+                            <div class="detail-section">
+                                <div class="detail-title">💡 溫馨回程提醒：</div>
+                                <div class="detail-bullet">凌晨航班建議提前 3 小時抵達烏魯木齊地窩堡機場辦理登機。境外旅客安檢繁瑣，請預留充足時間。</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Area -->
+    <div id="map-container">
+        <!-- Layer selector -->
+        <div class="map-layer-toggle">
+            <button class="layer-btn active" onclick="switchMapLayer('voyager')">探索地圖</button>
+            <button class="layer-btn" onclick="switchMapLayer('satellite')">衛星影像</button>
+            <button class="layer-btn" onclick="switchMapLayer('dark')">極簡暗黑</button>
+            <label class="gas-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
+                <input type="checkbox" id="gas-toggle" onchange="toggleGasStations(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> ⛽ 加油站
+            </label>
+            <label class="service-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
+                <input type="checkbox" id="service-toggle" onchange="toggleServiceAreas(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> ☕ 服務區與觀景點
+            </label>
+        </div>
+
+        <!-- The Map -->
+        <div id="map"></div>
+
+        <!-- Utilities Panel Toggle -->
+        <button class="utilities-toggle-btn" onclick="toggleUtilities()">🔧</button>
+
+        <!-- Utilities Panel -->
+        <div class="utilities-panel" id="utilities-panel">
+            <h3>
+                <span>📋 自駕旅行小工具</span>
+                <span class="close-btn" onclick="toggleUtilities()">×</span>
+            </h3>
+            <div class="utility-tab-content">
+                <p style="font-weight: 700; margin-bottom: 8px; color: var(--accent-color);">🎒 出發前裝備檢查清單：</p>
+                <div class="utility-item"><input type="checkbox"> <span>台胞證、台灣駕照正本 (換照必備)</span></div>
+                <div class="utility-item"><input type="checkbox"> <span>保暖羽絨外套、防風防雨衝鋒衣</span></div>
+                <div class="utility-item"><input type="checkbox"> <span>偏光太陽眼鏡 (高海拔防眩光)</span></div>
+                <div class="utility-item"><input type="checkbox"> <span>保濕乳液、護唇膏、防曬乳</span></div>
+                <div class="utility-item"><input type="checkbox"> <span>保溫瓶 (新疆長途自駕必備熱水)</span></div>
+                <div class="utility-item"><input type="checkbox"> <span>車載手機架、高速車載充電器</span></div>
+                <div class="utility-item"><input type="checkbox"> <span>個人常備藥 (感冒、暈車、腸胃藥)</span></div>
+                
+                <p style="font-weight: 700; margin: 12px 0 8px 0; color: var(--accent-color);">⛽ 2026 自駕安全守則：</p>
+                <p style="line-height: 1.4; color: var(--text-secondary);">
+                    1. <strong>嚴守速限：</strong>新疆流動與區間測速極多，請嚴格按照導航速限行駛。<br>
+                    2. <strong>見油就加：</strong>山區及部分高速路段加油站間隔遠，油量剩半箱即應補充。<br>
+                    3. <strong>實名加油：</strong>加油站通常需刷台胞證或由工作人員登記，駕駛人需下車刷臉登記後才能開車入內。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // Define coordinates of key tourist spots
+        const locations = {
+            "urumqi": { name: "烏魯木齊市", coords: [43.8256, 87.6168], desc: "全疆首府，物資補給與申辦臨時駕照起點", type: "city" },
+            "dushanzi": { name: "獨山子區", coords: [44.3276, 84.8864], desc: "獨庫公路北端起點，獨山子大峽谷", type: "transit" },
+            "qiaorma": { name: "喬爾瑪", coords: [43.7844, 84.4239], desc: "獨庫公路中段樞紐，設有烈士陵園與加油站", type: "transit" },
+            "nalati": { name: "那拉提草原", coords: [43.3275, 84.0197], desc: "空中草原與河谷草原，高山雪山牧場景色", type: "scenic" },
+            "yining": { name: "伊寧市", coords: [43.9149, 81.3148], desc: "伊犁哈薩克自治州首府，六星街與喀贊其風情區", type: "city" },
+            "sayram": { name: "賽里木湖", coords: [44.5956, 81.1683], desc: "大西洋最後一滴眼淚，純淨的高山湖泊", type: "scenic" },
+            "kuitun": { name: "奎屯市", coords: [44.4244, 84.9011], desc: "北疆重要交通樞紐，美味大盤雞補給點", type: "city" },
+            "karamay": { name: "克拉瑪依市", coords: [45.5977, 84.8735], desc: "石油之城，百里油田與黑油山景區", type: "city" },
+            "ghostcity": { name: "烏爾禾魔鬼城", coords: [46.1264, 85.7001], desc: "雅丹地貌，風蝕城堡景觀，臥虎藏龍拍攝地", type: "scenic" },
+            "burqin": { name: "布爾津縣", coords: [47.7006, 86.8643], desc: "童話邊境小鎮，前往喀納斯的中轉站，五彩灘景區", type: "city" },
+            "hemu": { name: "禾木村", coords: [48.5728, 87.4294], desc: "圖瓦人原始村落，木屋與清晨的北歐仙境晨霧", type: "scenic" },
+            "kanas": { name: "喀納斯 (賈登峪)", coords: [48.4975, 87.0392], desc: "喀納斯湖與精華三灣（月亮灣、臥龍灣、神仙灣）", type: "scenic" },
+            "altay": { name: "阿勒泰市", coords: [47.8398, 88.1343], desc: "人類滑雪起源地，淨土阿勒泰，S21高速起點", type: "city" }
+        };
+
+        // Define routes for Scheme A (original)
+        const routesDataA = {
+            3: [locations.urumqi.coords, locations.dushanzi.coords, locations.qiaorma.coords, locations.nalati.coords],
+            5: [locations.nalati.coords, locations.yining.coords, [44.385, 81.258], locations.sayram.coords], // Custom bend via Guozigou
+            6: [locations.sayram.coords, locations.kuitun.coords, locations.karamay.coords],
+            7: [locations.karamay.coords, locations.ghostcity.coords, locations.burqin.coords, locations.hemu.coords],
+            8: [locations.hemu.coords, locations.kanas.coords],
+            9: [locations.kanas.coords, locations.burqin.coords, locations.altay.coords],
+            10: [locations.altay.coords, [45.8, 87.6], [44.8, 87.5], locations.urumqi.coords]
+        };
+
+        // Define routes for Scheme B (alternative)
+        const routesDataB = {
+            3: [locations.urumqi.coords, locations.dushanzi.coords, locations.qiaorma.coords, locations.nalati.coords],
+            5: [locations.nalati.coords, locations.yining.coords, [44.385, 81.258], locations.sayram.coords],
+            6: [locations.sayram.coords, locations.kuitun.coords, locations.karamay.coords, locations.ghostcity.coords, locations.burqin.coords],
+            7: [locations.burqin.coords, locations.hemu.coords],
+            8: [locations.hemu.coords, locations.kanas.coords],
+            9: [locations.kanas.coords, locations.burqin.coords, locations.altay.coords],
+            10: [locations.altay.coords, [45.8, 87.6], [44.8, 87.5], locations.urumqi.coords]
+        };
+
+        let currentScheme = 'A';
+        let routesData = routesDataA;
+
+        // Initialize Map
+        const map = L.map('map', {
+            center: [46.0, 85.0], // Center of Northern Xinjiang
+            zoom: 6.5,
+            zoomControl: false
+        });
+
+        // Add Zoom Control to the top-right
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // Define tile layers
+        const mapTiles = {
+            voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            }),
+            dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 20
+            })
+        };
+
+        // Add default layer
+        mapTiles.voyager.addTo(map);
+
+        // Layer switching function
+        function switchMapLayer(layerName) {
+            // Remove all layers first
+            Object.values(mapTiles).forEach(layer => map.removeLayer(layer));
+            // Add selected
+            mapTiles[layerName].addTo(map);
+            
+            // Update button styles
+            document.querySelectorAll('.layer-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Add Markers to Map
+        const mapMarkers = {};
+        Object.entries(locations).forEach(([key, loc]) => {
+            const isCity = loc.type === "city";
+            const markerColor = isCity ? "#818cf8" : "#10b981";
+            
+            // Custom HTML/SVG marker pin
+            const iconHtml = `
+                <div class="marker-pulse" id="pulse-${key}" style="display:none;"></div>
+                <div class="marker-pin" id="pin-${key}" style="background-color: ${markerColor};">
+                    <span class="marker-icon-inner">${isCity ? '🏙️' : '🌲'}</span>
+                </div>
+            `;
+            
+            const customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: iconHtml,
+                iconSize: [30, 42],
+                iconAnchor: [15, 42],
+                popupAnchor: [0, -40]
+            });
+
+            const popupContent = `
+                <div class="popup-title">${loc.name}</div>
+                <div class="popup-desc">${loc.desc}</div>
+            `;
+
+            const marker = L.marker(loc.coords, { icon: customIcon })
+                .bindPopup(popupContent)
+                .addTo(map);
+                
+            mapMarkers[key] = marker;
+        });
+
+        // Define Gas Stations
+        const gasStations = [
+            { name: "烏魯木齊中石油加油站", coords: [43.83, 87.60], desc: "烏魯木齊市區加油站，自駕出發前建議在此加滿。" },
+            { name: "獨山子中石油加油站", coords: [44.31, 84.87], desc: "進入獨庫公路北段的起點。**進入山區前務必在此加滿油箱！**" },
+            { name: "喬爾瑪服務區加油站", coords: [43.784, 84.425], desc: "獨庫公路北段唯一的關鍵補給加油站，排隊車輛多，建議隨時補充。" },
+            { name: "那拉提鎮加油站", coords: [43.32, 84.00], desc: "那拉提景區周圍城鎮的重要加油點。" },
+            { name: "伊寧市加油站", coords: [43.91, 81.30], desc: "伊犁哈薩克自治州首府市區加油站。" },
+            { name: "賽里木湖服務區加油站", coords: [44.60, 81.25], desc: "賽里木湖東門/南門服務區補給站，環湖自駕與長途北上之必備加油點。" },
+            { name: "奎屯高速服務區加油站", coords: [44.43, 84.88], desc: "連霍高速重要樞紐服務區加油站。" },
+            { name: "克拉瑪依市區加油站", coords: [45.58, 84.86], desc: "克拉瑪依市區加油站，石油之城補給資源豐富。" },
+            { name: "烏爾禾世界魔鬼城加油站", coords: [46.13, 85.69], desc: "烏爾禾景區旁重要補給點，北上布爾津前的加油首選。" },
+            { name: "布爾津縣城加油站", coords: [47.70, 86.85], desc: "**阿勒泰山區前最重要的加油站！** 前往禾木/喀納斯前**務必在此加滿**，因為山區加油排隊極長或經常斷油。" },
+            { name: "衝乎爾鎮加油站", coords: [48.22, 86.97], desc: "S232省道去往喀納斯山路途中的重要中轉加油點。" },
+            { name: "禾木景區入口加油站", coords: [48.56, 87.41], desc: "禾木景區門票站外的補給加油站。" },
+            { name: "賈登峪服務區加油站", coords: [48.49, 87.03], desc: "喀納斯景區入口賈登峪的唯一加油站。" },
+            { name: "阿勒泰市中石油加油站", coords: [47.83, 88.12], desc: "阿勒泰市區加油站，進入S21沙漠公路前建議在此加滿。" },
+            { name: "S21克拉美麗服務區加油站", coords: [45.48, 87.58], desc: "**S21沙漠高速唯一核心服務區！** 穿越古爾班通古特沙漠前，請務必在此加油。" }
+        ];
+
+        // Custom icon for gas stations
+        const gasIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `
+                <div class="marker-pin" style="background-color: #f59e0b; width: 24px; height: 24px; margin: -12px 0 0 -12px; border: 1.5px solid #fff; box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);">
+                    <span class="marker-icon-inner" style="transform: rotate(45deg); font-size: 10px;">⛽</span>
+                </div>
+            `,
+            iconSize: [24, 34],
+            iconAnchor: [12, 34],
+            popupAnchor: [0, -30]
+        });
+
+        const gasMarkersList = [];
+
+        // Initialize Gas Stations Markers
+        function initGasStations() {
+            gasStations.forEach(station => {
+                const popupContent = `
+                    <div class="popup-title">⛽ ${station.name}</div>
+                    <div class="popup-desc">${station.desc}</div>
+                `;
+                const marker = L.marker(station.coords, { icon: gasIcon })
+                    .bindPopup(popupContent);
+                gasMarkersList.push(marker);
+            });
+        }
+
+        // Toggle Gas Stations Visibility
+        function toggleGasStations(visible) {
+            gasMarkersList.forEach(marker => {
+                if (visible) {
+                    marker.addTo(map);
+                } else {
+                    map.removeLayer(marker);
+                }
+            });
+        }
+
+        // Define Service Areas & Viewpoints
+        const serviceAreas = [
+            { name: "獨山子大峽谷觀景休息區 (Duku North)", coords: [44.22, 84.87], desc: "⭐️ **推薦停靠**：獨庫公路北段起點附近的奇特大峽谷地貌，風光極其震撼，非常適合下車拍照。" },
+            { name: "哈希勒根達坂觀景點 (Duku North)", coords: [43.90, 84.45], desc: "⭐️ **推薦停靠**：海拔 3390 米的防雪走廊與隧道口，是北段最高點，可觀賞終年不化的冰川雪牆與天山積雪。" },
+            { name: "喬爾瑪服務區 (Duku Middle)", coords: [43.784, 84.425], desc: "⭐️ **推薦停靠 (必停)**：設有獨庫公路烈士紀念館。此處是北段與中段交界，有許多餐廳可享用新疆拌麵，並設有排隊加油站。" },
+            { name: "果子溝大橋觀景服務區 (G30)", coords: [44.48, 81.28], desc: "⭐️ **推薦停靠 (必停)**：位於賽里木湖下山方向，是**拍攝果子溝大橋全景**的最完美停靠點，景色如明信片般震撼。" },
+            { name: "賽里木湖南門服務區", coords: [44.52, 81.18], desc: "⭐️ **推薦停靠**：進入賽里木湖前的遊客中心，有餐飲、廁所及加油站，是自駕環湖的準備起點。" },
+            { name: "奎屯高速服務區 (G30)", coords: [44.43, 84.88], desc: "⭐️ **推薦停靠**：大型標準化國道服務區，洗手間設施完善，並有簡餐補給，是長途行車中途休息的理想場所。" },
+            { name: "烏爾禾世界魔鬼城遊客服務區 (G3014)", coords: [46.13, 85.69], desc: "⭐️ **推薦停靠 (必停)**：魔鬼城景區的主入口，除了加油站與洗手間外，還設有餐飲與特產店，適合在此休整並搭景區火車遊覽。" },
+            { name: "和什托洛蓋服務區 (G3014)", coords: [46.72, 85.98], desc: "⭐️ **推薦停靠**：克拉瑪依北上布爾津途中的唯一大型核心服務區，是漫長戈壁行車中**極為關鍵的洗手間與提神休息點**。" },
+            { name: "衝乎爾小鎮休息區 (S232)", coords: [48.22, 86.97], desc: "⭐️ **推薦停靠**：布爾津前往禾木/喀納斯山路中途的繁華小鎮。由於山路多彎且限速，建議在此停車上洗手間、買熱水、買水果，舒緩駕駛疲勞。" },
+            { name: "S21克拉美麗服務區", coords: [45.48, 87.58], desc: "⭐️ **推薦停靠 (必停)**：S21沙漠高速公路**唯一也是最發達的服務區**。緊鄰克拉美麗沙漠公園，有巨大的沙漠主題雕塑與駱駝，可下車走進沙丘拍照，設施非常豪華。" },
+            { name: "S21海子口服務區 (烏倫古湖畔)", coords: [47.10, 87.48], desc: "⭐️ **推薦停靠**：鄰近烏倫古湖，地處沙漠綠洲邊緣，傍晚時分在此停留可遠眺湖面日落，非常壯觀。" }
+        ];
+
+        // Custom icon for service areas
+        const serviceIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `
+                <div class="marker-pin" style="background-color: #3b82f6; width: 24px; height: 24px; margin: -12px 0 0 -12px; border: 1.5px solid #fff; box-shadow: 0 0 6px rgba(59, 130, 246, 0.4);">
+                    <span class="marker-icon-inner" style="transform: rotate(45deg); font-size: 10px;">☕</span>
+                </div>
+            `,
+            iconSize: [24, 34],
+            iconAnchor: [12, 34],
+            popupAnchor: [0, -30]
+        });
+
+        const serviceMarkersList = [];
+
+        // Initialize Service Areas Markers
+        function initServiceAreas() {
+            serviceAreas.forEach(area => {
+                const popupContent = `
+                    <div class="popup-title">☕ ${area.name}</div>
+                    <div class="popup-desc">${area.desc}</div>
+                `;
+                const marker = L.marker(area.coords, { icon: serviceIcon })
+                    .bindPopup(popupContent);
+                serviceMarkersList.push(marker);
+            });
+        }
+
+        // Toggle Service Areas Visibility
+        function toggleServiceAreas(visible) {
+            serviceMarkersList.forEach(marker => {
+                if (visible) {
+                    marker.addTo(map);
+                } else {
+                    map.removeLayer(marker);
+                }
+            });
+        }
+
+        // Draw Polylines (Routes)
+        const polylines = {};
+        const defaultStyle = {
+            color: '#64748b',
+            weight: 3,
+            opacity: 0.5,
+            dashArray: '5, 10'
+        };
+        const activeStyle = {
+            color: '#38bdf8',
+            weight: 6,
+            opacity: 0.9,
+            dashArray: null
+        };
+
+        function redrawPolylines() {
+            // Clear old polylines
+            Object.values(polylines).forEach(line => map.removeLayer(line));
+            
+            // Draw new polylines
+            Object.entries(routesData).forEach(([dayNum, coords]) => {
+                const polyline = L.polyline(coords, defaultStyle).addTo(map);
+                polylines[dayNum] = polyline;
+            });
+            
+            // Re-highlight active segment if applicable
+            if (currentlyActiveDay && polylines[currentlyActiveDay]) {
+                highlightRouteSegment(currentlyActiveDay);
+            }
+        }
+
+        // Interaction logic when user clicks on a day card
+        let currentlyActiveDay = 1;
+
+        function focusDay(dayNum) {
+            // Update active state in sidebar UI
+            document.querySelectorAll('.day-card').forEach(card => card.classList.remove('active'));
+            let selectedCard;
+            if (dayNum === 6 || dayNum === 7) {
+                selectedCard = document.querySelector(`.day-card[data-day="${dayNum}"].scheme-${currentScheme.toLowerCase()}-card`);
+            } else {
+                selectedCard = document.querySelector(`.day-card[data-day="${dayNum}"]`);
+            }
+            if (selectedCard) {
+                selectedCard.classList.add('active');
+            }
+
+            currentlyActiveDay = dayNum;
+
+            // Reset all marker styles and pulses
+            Object.keys(locations).forEach(key => {
+                const pulseEl = document.getElementById(`pulse-${key}`);
+                const pinEl = document.getElementById(`pin-${key}`);
+                if (pulseEl) pulseEl.style.display = 'none';
+                if (pinEl) pinEl.classList.remove('active');
+            });
+
+            // Reset all polyline styles
+            Object.values(polylines).forEach(line => {
+                line.setStyle(defaultStyle);
+            });
+
+            // Specific day map focus actions
+            if (dayNum === 1 || dayNum === 2) {
+                // Focus Urumqi
+                map.flyTo(locations.urumqi.coords, 10, { duration: 1.5 });
+                triggerMarkerPulse('urumqi');
+                mapMarkers.urumqi.openPopup();
+            } 
+            else if (dayNum === 3) {
+                // Urumqi to Nalati via Duku North
+                highlightRouteSegment(3);
+                triggerMarkerPulse('nalati');
+                map.flyToBounds(routesData[3], { padding: [50, 50], duration: 1.5 });
+            } 
+            else if (dayNum === 4) {
+                // Nalati local
+                map.flyTo(locations.nalati.coords, 11, { duration: 1.5 });
+                triggerMarkerPulse('nalati');
+                mapMarkers.nalati.openPopup();
+            } 
+            else if (dayNum === 5) {
+                // Nalati to Sayram Lake
+                highlightRouteSegment(5);
+                triggerMarkerPulse('sayram');
+                map.flyToBounds(routesData[5], { padding: [50, 50], duration: 1.5 });
+            } 
+            else if (dayNum === 6) {
+                // Sayram Lake to Karamay (A) or Burqin (B)
+                highlightRouteSegment(6);
+                const dest = currentScheme === 'A' ? 'karamay' : 'burqin';
+                triggerMarkerPulse(dest);
+                map.flyToBounds(routesData[6], { padding: [50, 50], duration: 1.5 });
+            } 
+            else if (dayNum === 7) {
+                // Karamay to Hemu (A) or Burqin to Hemu (B)
+                highlightRouteSegment(7);
+                triggerMarkerPulse('hemu');
+                map.flyToBounds(routesData[7], { padding: [50, 50], duration: 1.5 });
+            } 
+            else if (dayNum === 8) {
+                // Hemu to Kanas
+                highlightRouteSegment(8);
+                triggerMarkerPulse('kanas');
+                map.flyToBounds(routesData[8], { padding: [50, 50], duration: 1.5 });
+            } 
+            else if (dayNum === 9) {
+                // Kanas to Altay City
+                highlightRouteSegment(9);
+                triggerMarkerPulse('altay');
+                map.flyToBounds(routesData[9], { padding: [50, 50], duration: 1.5 });
+            } 
+            else if (dayNum === 10) {
+                // Altay to Urumqi (S21 Desert Highway)
+                highlightRouteSegment(10);
+                triggerMarkerPulse('urumqi');
+                map.flyToBounds(routesData[10], { padding: [50, 50], duration: 1.5 });
+            } 
+            else if (dayNum === 11) {
+                // Return flight
+                map.flyTo(locations.urumqi.coords, 8, { duration: 1.5 });
+                triggerMarkerPulse('urumqi');
+                mapMarkers.urumqi.openPopup();
+            }
+        }
+
+        function highlightRouteSegment(dayNum) {
+            if (polylines[dayNum]) {
+                polylines[dayNum].setStyle(activeStyle);
+                polylines[dayNum].bringToFront();
+            }
+        }
+
+        function triggerMarkerPulse(locationKey) {
+            const pulseEl = document.getElementById(`pulse-${locationKey}`);
+            const pinEl = document.getElementById(`pin-${locationKey}`);
+            if (pulseEl) pulseEl.style.display = 'block';
+            if (pinEl) pinEl.classList.add('active');
+        }
+
+        // Utilities Panel Toggle Function
+        function toggleUtilities() {
+            const panel = document.getElementById('utilities-panel');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+            }
+        }
+
+        // Switch between Scheme A and Scheme B
+        function switchScheme(scheme) {
+            if (currentScheme === scheme) return;
+            currentScheme = scheme;
+
+            const btnA = document.getElementById('scheme-a-btn');
+            const btnB = document.getElementById('scheme-b-btn');
+
+            if (scheme === 'A') {
+                btnA.classList.add('active');
+                btnB.classList.remove('active');
+                document.querySelectorAll('.scheme-a-card').forEach(el => el.style.display = 'block');
+                document.querySelectorAll('.scheme-b-card').forEach(el => el.style.display = 'none');
+                routesData = routesDataA;
+            } else {
+                btnA.classList.remove('active');
+                btnB.classList.add('active');
+                document.querySelectorAll('.scheme-a-card').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.scheme-b-card').forEach(el => el.style.display = 'block');
+                routesData = routesDataB;
+            }
+
+            redrawPolylines();
+            
+            // Re-focus current day to update map view
+            focusDay(currentlyActiveDay);
+        }
+
+        // Initialize state on page load
+        window.addEventListener('load', () => {
+            initGasStations();
+            initServiceAreas();
+            redrawPolylines();
+            focusDay(1);
+        });
+    </script>
+</body>
+</html>
