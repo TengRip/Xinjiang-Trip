@@ -521,6 +521,37 @@
             line-height: 1.4;
         }
 
+        /* Route Polyline Label */
+        .route-label-icon {
+            background: none;
+            border: none;
+            pointer-events: none !important;
+        }
+
+        .route-label {
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            pointer-events: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .route-label.active {
+            background-color: var(--accent-color);
+            color: #0f172a;
+            border-color: var(--accent-color);
+            font-weight: 700;
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
+        }
+
         /* Responsive adjustments */
         @media (max-width: 900px) {
             body {
@@ -1168,8 +1199,29 @@
             10: [locations.altay.coords, [45.8, 87.6], [44.8, 87.5], locations.urumqi.coords]
         };
 
+        const routeLabelsDataA = {
+            3: "⏱️ ~5.5-7小時",
+            5: "⏱️ ~4-5小時",
+            6: "⏱️ ~6小時",
+            7: "⏱️ ~7.5小時",
+            8: "⏱️ ~2小時",
+            9: "⏱️ ~5.5小時",
+            10: "⏱️ ~5小時"
+        };
+
+        const routeLabelsDataB = {
+            3: "⏱️ ~5.5-7小時",
+            5: "⏱️ ~4-5小時",
+            6: "⏱️ ~8.5小時",
+            7: "⏱️ ~3.5小時",
+            8: "⏱️ ~2小時",
+            9: "⏱️ ~5.5小時",
+            10: "⏱️ ~5小時"
+        };
+
         let currentScheme = 'A';
         let routesData = routesDataA;
+        let routeLabelsData = routeLabelsDataA;
 
         // Initialize Map
         const map = L.map('map', {
@@ -1361,6 +1413,7 @@
 
         // Draw Polylines (Routes)
         const polylines = {};
+        const routeLabels = {};
         const defaultStyle = {
             color: '#64748b',
             weight: 3,
@@ -1374,14 +1427,49 @@
             dashArray: null
         };
 
-        function redrawPolylines() {
-            // Clear old polylines
-            Object.values(polylines).forEach(line => map.removeLayer(line));
+        // Helper to find the midpoint of a list of coordinates
+        function getPolylineMidpoint(coords) {
+            if (!coords || coords.length === 0) return null;
+            if (coords.length === 1) return coords[0];
             
-            // Draw new polylines
+            const midIndex = Math.floor(coords.length / 2);
+            if (coords.length % 2 === 1) {
+                return coords[midIndex];
+            } else {
+                const p1 = coords[midIndex - 1];
+                const p2 = coords[midIndex];
+                return [
+                    (p1[0] + p2[0]) / 2,
+                    (p1[1] + p2[1]) / 2
+                ];
+            }
+        }
+
+        function redrawPolylines() {
+            // Clear old polylines and labels
+            Object.values(polylines).forEach(line => map.removeLayer(line));
+            Object.values(routeLabels).forEach(label => map.removeLayer(label));
+            
+            // Draw new polylines and labels
             Object.entries(routesData).forEach(([dayNum, coords]) => {
                 const polyline = L.polyline(coords, defaultStyle).addTo(map);
                 polylines[dayNum] = polyline;
+
+                // Add label if there is label text for this day
+                const labelText = routeLabelsData[dayNum];
+                if (labelText) {
+                    const midpoint = getPolylineMidpoint(coords);
+                    if (midpoint) {
+                        const labelIcon = L.divIcon({
+                            className: 'route-label-icon',
+                            html: `<div class="route-label" id="label-day-${dayNum}">${labelText}</div>`,
+                            iconSize: [80, 20],
+                            iconAnchor: [40, 10]
+                        });
+                        const labelMarker = L.marker(midpoint, { icon: labelIcon, interactive: false }).addTo(map);
+                        routeLabels[dayNum] = labelMarker;
+                    }
+                }
             });
             
             // Re-highlight active segment if applicable
@@ -1490,6 +1578,21 @@
                 polylines[dayNum].setStyle(activeStyle);
                 polylines[dayNum].bringToFront();
             }
+            // Highlight the text label
+            document.querySelectorAll('.route-label').forEach(el => el.classList.remove('active'));
+            const activeLabel = document.getElementById(`label-day-${dayNum}`);
+            if (activeLabel) {
+                activeLabel.classList.add('active');
+                if (routeLabels[dayNum]) {
+                    routeLabels[dayNum].setZIndexOffset(1000);
+                }
+            }
+            // Reset zIndexOffset for other labels
+            Object.entries(routeLabels).forEach(([d, labelMarker]) => {
+                if (parseInt(d) !== dayNum) {
+                    labelMarker.setZIndexOffset(0);
+                }
+            });
         }
 
         function triggerMarkerPulse(locationKey) {
@@ -1523,12 +1626,14 @@
                 document.querySelectorAll('.scheme-a-card').forEach(el => el.style.display = 'block');
                 document.querySelectorAll('.scheme-b-card').forEach(el => el.style.display = 'none');
                 routesData = routesDataA;
+                routeLabelsData = routeLabelsDataA;
             } else {
                 btnA.classList.remove('active');
                 btnB.classList.add('active');
                 document.querySelectorAll('.scheme-a-card').forEach(el => el.style.display = 'none');
                 document.querySelectorAll('.scheme-b-card').forEach(el => el.style.display = 'block');
                 routesData = routesDataB;
+                routeLabelsData = routeLabelsDataB;
             }
 
             redrawPolylines();
