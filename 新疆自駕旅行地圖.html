@@ -1171,7 +1171,8 @@
             "kuitun": { name: "奎屯市", coords: [44.4244, 84.9011], desc: "北疆重要交通樞紐，美味大盤雞補給點", type: "city" },
             "karamay": { name: "克拉瑪依市", coords: [45.5977, 84.8735], desc: "石油之城，百里油田與黑油山景區", type: "city" },
             "ghostcity": { name: "烏爾禾魔鬼城", coords: [46.1264, 85.7001], desc: "雅丹地貌，風蝕城堡景觀，臥虎藏龍拍攝地", type: "scenic" },
-            "burqin": { name: "布爾津縣", coords: [47.7006, 86.8643], desc: "童話邊境小鎮，前往喀納斯的中轉站，五彩灘景區", type: "city" },
+            "burqin": { name: "布爾津縣", coords: [47.7006, 86.8643], desc: "童話邊境小鎮，前往喀納斯的中轉站", type: "city" },
+            "wucaitan": { name: "五彩灘", coords: [47.7562, 86.6789], desc: "雅丹地貌，與額爾齊斯河對岸胡楊林交相輝映，最美落日觀賞點", type: "scenic" },
             "hemu": { name: "禾木村", coords: [48.5728, 87.4294], desc: "圖瓦人原始村落，木屋與清晨的北歐仙境晨霧", type: "scenic" },
             "kanas": { name: "喀納斯 (賈登峪)", coords: [48.4975, 87.0392], desc: "喀納斯湖與精華三灣（月亮灣、臥龍灣、神仙灣）", type: "scenic" },
             "altay": { name: "阿勒泰市", coords: [47.8398, 88.1343], desc: "人類滑雪起源地，淨土阿勒泰，S21高速起點", type: "city" }
@@ -1179,49 +1180,79 @@
 
         // Define routes for Scheme A (original)
         const routesDataA = {
-            3: [locations.urumqi.coords, locations.dushanzi.coords, locations.qiaorma.coords, locations.nalati.coords],
-            5: [locations.nalati.coords, locations.yining.coords, [44.385, 81.258], locations.sayram.coords], // Custom bend via Guozigou
-            6: [locations.sayram.coords, locations.kuitun.coords, locations.karamay.coords],
-            7: [locations.karamay.coords, locations.ghostcity.coords, locations.burqin.coords, locations.hemu.coords],
-            8: [locations.hemu.coords, locations.kanas.coords],
-            9: [locations.kanas.coords, locations.burqin.coords, locations.altay.coords],
-            10: [locations.altay.coords, [45.8, 87.6], [44.8, 87.5], locations.urumqi.coords]
+            3: [
+                { coords: [locations.urumqi.coords, locations.dushanzi.coords], label: "⏱️ ~2.5小時" },
+                { coords: [locations.dushanzi.coords, locations.qiaorma.coords], label: "⏱️ ~2小時" },
+                { coords: [locations.qiaorma.coords, locations.nalati.coords], label: "⏱️ ~2小時" }
+            ],
+            5: [
+                { coords: [locations.nalati.coords, locations.yining.coords], label: "⏱️ ~2.5小時" },
+                { coords: [locations.yining.coords, [44.385, 81.258], locations.sayram.coords], label: "⏱️ ~2小時" }
+            ],
+            6: [
+                { coords: [locations.sayram.coords, locations.kuitun.coords], label: "⏱️ ~3.5小時" },
+                { coords: [locations.kuitun.coords, locations.karamay.coords], label: "⏱️ ~2.5小時" }
+            ],
+            7: [
+                { coords: [locations.karamay.coords, locations.ghostcity.coords, locations.burqin.coords], label: "⏱️ ~3.5小時" },
+                { coords: [locations.burqin.coords, locations.hemu.coords], label: "⏱️ ~3.5小時" }
+            ],
+            8: [
+                { coords: [locations.hemu.coords, locations.kanas.coords], label: "⏱️ ~2小時" }
+            ],
+            9: [
+                { coords: [locations.kanas.coords, locations.burqin.coords], label: "⏱️ ~2.5小時" },
+                { coords: [locations.burqin.coords, locations.altay.coords], label: "⏱️ ~1.5小時" }
+            ],
+            10: [
+                { coords: [locations.altay.coords, [45.8, 87.6], [44.8, 87.5], locations.urumqi.coords], label: "⏱️ ~5小時" }
+            ]
         };
 
         // Define routes for Scheme B (alternative)
         const routesDataB = {
-            3: [locations.urumqi.coords, locations.dushanzi.coords, locations.qiaorma.coords, locations.nalati.coords],
-            5: [locations.nalati.coords, locations.yining.coords, [44.385, 81.258], locations.sayram.coords],
-            6: [locations.sayram.coords, locations.kuitun.coords, locations.karamay.coords, locations.ghostcity.coords, locations.burqin.coords],
-            7: [locations.burqin.coords, locations.hemu.coords],
-            8: [locations.hemu.coords, locations.kanas.coords],
-            9: [locations.kanas.coords, locations.burqin.coords, locations.altay.coords],
-            10: [locations.altay.coords, [45.8, 87.6], [44.8, 87.5], locations.urumqi.coords]
-        };
-
-        const routeLabelsDataA = {
-            3: "⏱️ ~5.5-7小時",
-            5: "⏱️ ~4-5小時",
-            6: "⏱️ ~6小時",
-            7: "⏱️ ~7.5小時",
-            8: "⏱️ ~2小時",
-            9: "⏱️ ~5.5小時",
-            10: "⏱️ ~5小時"
-        };
-
-        const routeLabelsDataB = {
-            3: "⏱️ ~5.5-7小時",
-            5: "⏱️ ~4-5小時",
-            6: "⏱️ ~8.5小時",
-            7: "⏱️ ~3.5小時",
-            8: "⏱️ ~2小時",
-            9: "⏱️ ~5.5小時",
-            10: "⏱️ ~5小時"
+            3: [
+                { coords: [locations.urumqi.coords, locations.dushanzi.coords], label: "⏱️ ~2.5小時" },
+                { coords: [locations.dushanzi.coords, locations.qiaorma.coords], label: "⏱️ ~2小時" },
+                { coords: [locations.qiaorma.coords, locations.nalati.coords], label: "⏱️ ~2小時" }
+            ],
+            5: [
+                { coords: [locations.nalati.coords, locations.yining.coords], label: "⏱️ ~2.5小時" },
+                { coords: [locations.yining.coords, [44.385, 81.258], locations.sayram.coords], label: "⏱️ ~2小時" }
+            ],
+            6: [
+                { coords: [locations.sayram.coords, locations.kuitun.coords], label: "⏱️ ~3.5小時" },
+                { coords: [locations.kuitun.coords, locations.karamay.coords, locations.ghostcity.coords, locations.wucaitan.coords], label: "⏱️ ~4.5小時" },
+                { coords: [locations.wucaitan.coords, locations.burqin.coords], label: "⏱️ ~30分鐘" }
+            ],
+            7: [
+                { coords: [locations.burqin.coords, locations.hemu.coords], label: "⏱️ ~3.5小時" }
+            ],
+            8: [
+                { coords: [locations.hemu.coords, locations.kanas.coords], label: "⏱️ ~2小時" }
+            ],
+            9: [
+                { coords: [locations.kanas.coords, locations.burqin.coords], label: "⏱️ ~2.5小時" },
+                { coords: [locations.burqin.coords, locations.altay.coords], label: "⏱️ ~1.5小時" }
+            ],
+            10: [
+                { coords: [locations.altay.coords, [45.8, 87.6], [44.8, 87.5], locations.urumqi.coords], label: "⏱️ ~5小時" }
+            ]
         };
 
         let currentScheme = 'A';
         let routesData = routesDataA;
-        let routeLabelsData = routeLabelsDataA;
+
+        // Helper to flatten active day coordinates for map zooming
+        function getDayCoordinates(dayNum) {
+            const legs = routesData[dayNum];
+            if (!legs) return [];
+            let allCoords = [];
+            legs.forEach(leg => {
+                allCoords = allCoords.concat(leg.coords);
+            });
+            return allCoords;
+        }
 
         // Initialize Map
         const map = L.map('map', {
@@ -1447,29 +1478,40 @@
 
         function redrawPolylines() {
             // Clear old polylines and labels
-            Object.values(polylines).forEach(line => map.removeLayer(line));
-            Object.values(routeLabels).forEach(label => map.removeLayer(label));
+            Object.values(polylines).forEach(linesArray => {
+                linesArray.forEach(line => map.removeLayer(line));
+            });
+            Object.values(routeLabels).forEach(labelsArray => {
+                labelsArray.forEach(label => map.removeLayer(label));
+            });
+            
+            // Clear dictionaries
+            Object.keys(polylines).forEach(key => delete polylines[key]);
+            Object.keys(routeLabels).forEach(key => delete routeLabels[key]);
             
             // Draw new polylines and labels
-            Object.entries(routesData).forEach(([dayNum, coords]) => {
-                const polyline = L.polyline(coords, defaultStyle).addTo(map);
-                polylines[dayNum] = polyline;
-
-                // Add label if there is label text for this day
-                const labelText = routeLabelsData[dayNum];
-                if (labelText) {
-                    const midpoint = getPolylineMidpoint(coords);
-                    if (midpoint) {
-                        const labelIcon = L.divIcon({
-                            className: 'route-label-icon',
-                            html: `<div class="route-label" id="label-day-${dayNum}">${labelText}</div>`,
-                            iconSize: [80, 20],
-                            iconAnchor: [40, 10]
-                        });
-                        const labelMarker = L.marker(midpoint, { icon: labelIcon, interactive: false }).addTo(map);
-                        routeLabels[dayNum] = labelMarker;
+            Object.entries(routesData).forEach(([dayNum, legs]) => {
+                polylines[dayNum] = [];
+                routeLabels[dayNum] = [];
+                
+                legs.forEach((leg, index) => {
+                    const polyline = L.polyline(leg.coords, defaultStyle).addTo(map);
+                    polylines[dayNum].push(polyline);
+                    
+                    if (leg.label) {
+                        const midpoint = getPolylineMidpoint(leg.coords);
+                        if (midpoint) {
+                            const labelIcon = L.divIcon({
+                                className: 'route-label-icon',
+                                html: `<div class="route-label label-day-${dayNum}" id="label-day-${dayNum}-${index}">${leg.label}</div>`,
+                                iconSize: [80, 20],
+                                iconAnchor: [40, 10]
+                            });
+                            const labelMarker = L.marker(midpoint, { icon: labelIcon, interactive: false }).addTo(map);
+                            routeLabels[dayNum].push(labelMarker);
+                        }
                     }
-                }
+                });
             });
             
             // Re-highlight active segment if applicable
@@ -1505,8 +1547,10 @@
             });
 
             // Reset all polyline styles
-            Object.values(polylines).forEach(line => {
-                line.setStyle(defaultStyle);
+            Object.values(polylines).forEach(linesArray => {
+                linesArray.forEach(line => {
+                    line.setStyle(defaultStyle);
+                });
             });
 
             // Specific day map focus actions
@@ -1520,7 +1564,7 @@
                 // Urumqi to Nalati via Duku North
                 highlightRouteSegment(3);
                 triggerMarkerPulse('nalati');
-                map.flyToBounds(routesData[3], { padding: [50, 50], duration: 1.5 });
+                map.flyToBounds(getDayCoordinates(3), { padding: [50, 50], duration: 1.5 });
             } 
             else if (dayNum === 4) {
                 // Nalati local
@@ -1532,38 +1576,38 @@
                 // Nalati to Sayram Lake
                 highlightRouteSegment(5);
                 triggerMarkerPulse('sayram');
-                map.flyToBounds(routesData[5], { padding: [50, 50], duration: 1.5 });
+                map.flyToBounds(getDayCoordinates(5), { padding: [50, 50], duration: 1.5 });
             } 
             else if (dayNum === 6) {
                 // Sayram Lake to Karamay (A) or Burqin (B)
                 highlightRouteSegment(6);
                 const dest = currentScheme === 'A' ? 'karamay' : 'burqin';
                 triggerMarkerPulse(dest);
-                map.flyToBounds(routesData[6], { padding: [50, 50], duration: 1.5 });
+                map.flyToBounds(getDayCoordinates(6), { padding: [50, 50], duration: 1.5 });
             } 
             else if (dayNum === 7) {
                 // Karamay to Hemu (A) or Burqin to Hemu (B)
                 highlightRouteSegment(7);
                 triggerMarkerPulse('hemu');
-                map.flyToBounds(routesData[7], { padding: [50, 50], duration: 1.5 });
+                map.flyToBounds(getDayCoordinates(7), { padding: [50, 50], duration: 1.5 });
             } 
             else if (dayNum === 8) {
                 // Hemu to Kanas
                 highlightRouteSegment(8);
                 triggerMarkerPulse('kanas');
-                map.flyToBounds(routesData[8], { padding: [50, 50], duration: 1.5 });
+                map.flyToBounds(getDayCoordinates(8), { padding: [50, 50], duration: 1.5 });
             } 
             else if (dayNum === 9) {
                 // Kanas to Altay City
                 highlightRouteSegment(9);
                 triggerMarkerPulse('altay');
-                map.flyToBounds(routesData[9], { padding: [50, 50], duration: 1.5 });
+                map.flyToBounds(getDayCoordinates(9), { padding: [50, 50], duration: 1.5 });
             } 
             else if (dayNum === 10) {
                 // Altay to Urumqi (S21 Desert Highway)
                 highlightRouteSegment(10);
                 triggerMarkerPulse('urumqi');
-                map.flyToBounds(routesData[10], { padding: [50, 50], duration: 1.5 });
+                map.flyToBounds(getDayCoordinates(10), { padding: [50, 50], duration: 1.5 });
             } 
             else if (dayNum === 11) {
                 // Return flight
@@ -1575,23 +1619,22 @@
 
         function highlightRouteSegment(dayNum) {
             if (polylines[dayNum]) {
-                polylines[dayNum].setStyle(activeStyle);
-                polylines[dayNum].bringToFront();
+                polylines[dayNum].forEach(line => {
+                    line.setStyle(activeStyle);
+                    line.bringToFront();
+                });
             }
-            // Highlight the text label
+            // Highlight the text labels for this day
             document.querySelectorAll('.route-label').forEach(el => el.classList.remove('active'));
-            const activeLabel = document.getElementById(`label-day-${dayNum}`);
-            if (activeLabel) {
-                activeLabel.classList.add('active');
-                if (routeLabels[dayNum]) {
-                    routeLabels[dayNum].setZIndexOffset(1000);
-                }
-            }
-            // Reset zIndexOffset for other labels
-            Object.entries(routeLabels).forEach(([d, labelMarker]) => {
-                if (parseInt(d) !== dayNum) {
-                    labelMarker.setZIndexOffset(0);
-                }
+            document.querySelectorAll(`.label-day-${dayNum}`).forEach(el => {
+                el.classList.add('active');
+            });
+            // Adjust zIndexOffset for labels
+            Object.entries(routeLabels).forEach(([d, labelsArray]) => {
+                const isActive = parseInt(d) === dayNum;
+                labelsArray.forEach(labelMarker => {
+                    labelMarker.setZIndexOffset(isActive ? 1000 : 0);
+                });
             });
         }
 
@@ -1626,14 +1669,12 @@
                 document.querySelectorAll('.scheme-a-card').forEach(el => el.style.display = 'block');
                 document.querySelectorAll('.scheme-b-card').forEach(el => el.style.display = 'none');
                 routesData = routesDataA;
-                routeLabelsData = routeLabelsDataA;
             } else {
                 btnA.classList.remove('active');
                 btnB.classList.add('active');
                 document.querySelectorAll('.scheme-a-card').forEach(el => el.style.display = 'none');
                 document.querySelectorAll('.scheme-b-card').forEach(el => el.style.display = 'block');
                 routesData = routesDataB;
-                routeLabelsData = routeLabelsDataB;
             }
 
             redrawPolylines();
