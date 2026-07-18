@@ -552,6 +552,21 @@
             box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
         }
 
+        /* Hotel connection labels */
+        .hotel-label {
+            background-color: #ec4899;
+            color: #ffffff;
+            border: 1.5px solid #ffffff;
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 9px;
+            font-weight: 700;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            pointer-events: none;
+            display: inline-block;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 900px) {
             body {
@@ -1142,6 +1157,9 @@
             <label class="service-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
                 <input type="checkbox" id="service-toggle" onchange="toggleServiceAreas(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> ☕ 服務區與觀景點
             </label>
+            <label class="hotel-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
+                <input type="checkbox" id="hotel-toggle" onchange="toggleHotels(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> 🏨 訂妥住宿
+            </label>
         </div>
 
         <!-- The Map -->
@@ -1461,6 +1479,149 @@
             });
         }
 
+        // Define hotels and their connection paths
+        const hotels = [
+            { 
+                name: "如家·neo-烏魯木齊天山國際機場店", 
+                coords: [43.905, 87.515], 
+                desc: "📅 **入住：9/2 - 9/4 (2晚)**<br>📍 位於烏魯木齊地窩堡機場附近，方便Day 1深夜接機與Day 2前往市區車管所換照。<br>🚗 **車程資訊**：從烏魯木齊地窩堡機場到此酒店約 3.3 公里，車程約 6 分鐘。",
+                link: { from: [43.907, 87.474], label: "🚗 ~3.3 km / 6分鐘" }
+            },
+            { 
+                name: "那拉提閒窗雲影觀景民宿 (那拉提景區店)", 
+                coords: [43.345, 84.005], 
+                desc: "📅 **入住：9/4 - 9/6 (2晚)**<br>📍 鄰近那拉提景區入口，方便Day 4全天慢遊那拉提草原。<br>🚗 **車程資訊**：距那拉提鎮中心/景區入口約 2.5 公里，車程約 5 分鐘。",
+                link: { from: [43.3275, 84.0197], label: "🚗 ~2.5 km / 5分鐘" }
+            },
+            { 
+                name: "如家·neo-博樂賽里木湖景區遊客中心店", 
+                coords: [44.625, 81.238], 
+                desc: "📅 **入住：9/6 - 9/7 (1晚)**<br>📍 位於賽里木湖景區東門遊客中心附近，方便Day 5環湖後入住休息並欣賞日落。<br>🚗 **車程資訊**：距賽里木湖東門約 5 公里，車程約 8 分鐘。",
+                link: { from: [44.60, 81.18], label: "🚗 ~5 km / 8分鐘" }
+            },
+            { 
+                name: "如家·neo-克拉瑪依友誼路店", 
+                coords: [45.615, 84.855], 
+                desc: "📅 **入住：9/7 - 9/8 (1晚｜方案 A)**<br>📍 位於克拉瑪依市中心友誼路，周邊熱鬧，餐飲選擇多。<br>🚗 **車程資訊**：距克拉瑪依中心約 3 公里，車程約 5 分鐘。",
+                link: { from: [45.5977, 84.8735], label: "🚗 ~3 km / 5分鐘" },
+                scheme: 'A'
+            },
+            { 
+                name: "布爾津頤馨精品酒店 (中俄老碼頭店)", 
+                coords: [47.708, 86.852], 
+                desc: "📅 **入住：9/7 - 9/8 (1晚｜方案 B)**<br>📍 緊鄰中俄老碼頭與俄羅斯風情步行街，方便看過五彩灘夕陽後入住與逛夜市。<br>🚗 **車程資訊**：從五彩灘景區到此酒店約 24 公里，車程約 30 分鐘。",
+                link: { from: [47.7562, 86.6789], label: "🚗 ~24 km / 30分鐘" },
+                scheme: 'B'
+            },
+            { 
+                name: "禾木開門見山民宿 (禾木橋店)", 
+                coords: [48.572, 87.442], 
+                desc: "📅 **入住：9/8 - 9/9 (1晚)**<br>📍 位於禾木村內、靠近禾木橋，方便隔天清晨步行或搭接駁車到哈登觀景台拍晨霧。<br>🚌 **車程資訊**：從禾木景區山門停車場需換乘景區區間車進入，距酒店約 30 公里，車程約 40 分鐘。",
+                link: { from: [48.542, 87.429], label: "🚌 ~30 km / 40分鐘 (區間車)" }
+            },
+            { 
+                name: "喀納斯泰加民宿", 
+                coords: [48.515, 87.015], 
+                desc: "📅 **入住：9/9 - 9/10 (1晚)**<br>📍 位於喀納斯景區新村內，環境清幽雅致，適合深度慢遊三灣。<br>🚌 **車程資訊**：由賈登峪遊客中心換乘區間車進新村，距酒店約 3 公里，車程約 10 分鐘。",
+                link: { from: [48.4975, 87.0392], label: "🚌 ~3 km / 10分鐘 (區間車)" }
+            },
+            { 
+                name: "阿勒泰小城里美宿 (五百里風情街區店)", 
+                coords: [47.855, 88.115], 
+                desc: "📅 **入住：9/10 - 9/11 (1晚)**<br>📍 位於阿勒泰市五百里風情街區，附近有許多餐廳。<br>🚗 **車程資訊**：距阿勒泰中心約 2 公里，車程約 5 分鐘。",
+                link: { from: [47.8398, 88.1343], label: "🚗 ~2 km / 5分鐘" }
+            }
+        ];
+
+        // Custom icon for hotels
+        const hotelIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: `
+                <div class="marker-pin" style="background-color: #ec4899; width: 24px; height: 24px; margin: -12px 0 0 -12px; border: 1.5px solid #fff; box-shadow: 0 0 6px rgba(236, 72, 153, 0.5);">
+                    <span class="marker-icon-inner" style="transform: rotate(45deg); font-size: 10px;">🏨</span>
+                </div>
+            `,
+            iconSize: [24, 34],
+            iconAnchor: [12, 34],
+            popupAnchor: [0, -30]
+        });
+
+        const hotelMarkersList = [];
+        const hotelLinesList = [];
+        const hotelLabelsList = [];
+
+        // Initialize Hotel Markers, Lines & Midpoint Labels
+        function initHotels() {
+            // Clear lists first
+            hotelMarkersList.forEach(m => map.removeLayer(m));
+            hotelLinesList.forEach(l => map.removeLayer(l));
+            hotelLabelsList.forEach(lbl => map.removeLayer(lbl));
+            hotelMarkersList.length = 0;
+            hotelLinesList.length = 0;
+            hotelLabelsList.length = 0;
+
+            hotels.forEach((hotel, idx) => {
+                // If hotel has a scheme field and it doesn't match current active scheme, skip it
+                if (hotel.scheme && hotel.scheme !== currentScheme) {
+                    return;
+                }
+
+                const popupContent = `
+                    <div class="popup-title" style="color: #ec4899; font-weight: 700; margin-bottom: 4px;">🏨 ${hotel.name}</div>
+                    <div class="popup-desc">${hotel.desc}</div>
+                `;
+
+                // Hotel pin marker
+                const marker = L.marker(hotel.coords, { icon: hotelIcon })
+                    .bindPopup(popupContent);
+                hotelMarkersList.push(marker);
+
+                // Hotel link connection line to attraction/spot
+                if (hotel.link) {
+                    const lineCoords = [hotel.link.from, hotel.coords];
+                    const polyline = L.polyline(lineCoords, {
+                        color: '#ec4899',
+                        weight: 2.5,
+                        dashArray: '6, 6',
+                        opacity: 0.85
+                    });
+                    hotelLinesList.push(polyline);
+
+                    // Add distance/time label at the midpoint
+                    const midpoint = getPolylineMidpoint(lineCoords);
+                    if (midpoint) {
+                        const labelIcon = L.divIcon({
+                            className: 'route-label-icon',
+                            html: `<div class="hotel-label" id="hotel-label-${idx}">${hotel.link.label}</div>`,
+                            iconSize: [120, 20],
+                            iconAnchor: [60, 10]
+                        });
+                        const labelMarker = L.marker(midpoint, { icon: labelIcon, interactive: false });
+                        hotelLabelsList.push(labelMarker);
+                    }
+                }
+            });
+        }
+
+        // Toggle Hotels Visibility
+        function toggleHotels(visible) {
+            // Make sure the checkbox state reflects the value
+            const cb = document.getElementById('hotel-toggle');
+            if (cb) cb.checked = visible;
+
+            // If we are showing, re-init hotels to filter by the current scheme
+            if (visible) {
+                initHotels();
+                hotelMarkersList.forEach(m => m.addTo(map));
+                hotelLinesList.forEach(l => l.addTo(map));
+                hotelLabelsList.forEach(lbl => lbl.addTo(map));
+            } else {
+                hotelMarkersList.forEach(m => map.removeLayer(m));
+                hotelLinesList.forEach(l => map.removeLayer(l));
+                hotelLabelsList.forEach(lbl => map.removeLayer(lbl));
+            }
+        }
+
         // Draw Polylines (Routes)
         const polylines = {};
         const routeLabels = {};
@@ -1698,6 +1859,12 @@
 
             redrawPolylines();
             
+            // Re-draw hotels if they are visible to update scheme-specific hotels
+            const hotelToggle = document.getElementById('hotel-toggle');
+            if (hotelToggle && hotelToggle.checked) {
+                toggleHotels(true);
+            }
+            
             // Re-focus current day to update map view
             focusDay(currentlyActiveDay);
         }
@@ -1706,6 +1873,7 @@
         window.addEventListener('load', () => {
             initGasStations();
             initServiceAreas();
+            initHotels();
             redrawPolylines();
             focusDay(1);
         });
