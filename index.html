@@ -326,6 +326,26 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
+        .layer-menu-btn {
+            display: none;
+            background: var(--accent-color);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+            transition: all 0.2s;
+        }
+
+        .layer-toggle-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .layer-btn {
             background: transparent;
             border: none;
@@ -574,10 +594,52 @@
             }
             #sidebar {
                 width: 100%;
-                height: 45vh;
+                height: 50vh;
             }
             #map-container {
-                height: 55vh;
+                height: 50vh;
+            }
+
+            .layer-menu-btn {
+                display: block; /* Show menu toggle button on mobile */
+            }
+
+            .layer-toggle-content {
+                display: none; /* Hide contents by default on mobile */
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                position: absolute;
+                top: 48px;
+                right: 0;
+                width: 180px;
+                background: rgba(30, 41, 59, 0.95);
+                backdrop-filter: blur(16px);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 12px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                z-index: 999;
+            }
+
+            .layer-toggle-content.show {
+                display: flex; /* Show when active */
+            }
+
+            /* Adjust checkbox layouts for vertical stack on mobile */
+            .gas-toggle-label, .service-toggle-label, .hotel-toggle-label {
+                border-left: none !important;
+                padding-left: 0 !important;
+                margin-left: 0 !important;
+                width: 100%;
+                justify-content: flex-start;
+                padding: 4px 0;
+            }
+
+            .layer-btn {
+                width: 100%;
+                text-align: left;
+                padding: 8px 12px;
             }
         }
 
@@ -1147,19 +1209,22 @@
     <!-- Map Area -->
     <div id="map-container">
         <!-- Layer selector -->
-        <div class="map-layer-toggle">
-            <button class="layer-btn active" onclick="switchMapLayer('voyager')">探索地圖</button>
-            <button class="layer-btn" onclick="switchMapLayer('satellite')">衛星影像</button>
-            <button class="layer-btn" onclick="switchMapLayer('dark')">極簡暗黑</button>
-            <label class="gas-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
-                <input type="checkbox" id="gas-toggle" onchange="toggleGasStations(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> ⛽ 加油站
-            </label>
-            <label class="service-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
-                <input type="checkbox" id="service-toggle" onchange="toggleServiceAreas(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> ☕ 服務區與觀景點
-            </label>
-            <label class="hotel-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
-                <input type="checkbox" id="hotel-toggle" onchange="toggleHotels(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> 🏨 訂妥住宿
-            </label>
+        <div class="map-layer-toggle" id="layer-toggle-panel">
+            <button class="layer-menu-btn" onclick="toggleLayerMenu()" id="layer-menu-btn">🗺️ 圖層選單</button>
+            <div class="layer-toggle-content" id="layer-toggle-content">
+                <button class="layer-btn active" onclick="switchMapLayer('voyager')">探索地圖</button>
+                <button class="layer-btn" onclick="switchMapLayer('satellite')">衛星影像</button>
+                <button class="layer-btn" onclick="switchMapLayer('dark')">極簡暗黑</button>
+                <label class="gas-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
+                    <input type="checkbox" id="gas-toggle" onchange="toggleGasStations(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> ⛽ 加油站
+                </label>
+                <label class="service-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
+                    <input type="checkbox" id="service-toggle" onchange="toggleServiceAreas(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> ☕ 服務區與觀景點
+                </label>
+                <label class="hotel-toggle-label" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-primary); cursor: pointer; margin-left: 10px; border-left: 1px solid var(--border-color); padding-left: 10px; font-weight: 500;">
+                    <input type="checkbox" id="hotel-toggle" onchange="toggleHotels(this.checked)" style="cursor: pointer; width: 14px; height: 14px;"> 🏨 訂妥住宿
+                </label>
+            </div>
         </div>
 
         <!-- The Map -->
@@ -1868,6 +1933,23 @@
             // Re-focus current day to update map view
             focusDay(currentlyActiveDay);
         }
+
+        // Toggle Mobile Layer Selector Menu
+        function toggleLayerMenu() {
+            const content = document.getElementById('layer-toggle-content');
+            if (content) {
+                content.classList.toggle('show');
+            }
+        }
+
+        // Close layer menu when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('layer-toggle-panel');
+            const content = document.getElementById('layer-toggle-content');
+            if (panel && content && !panel.contains(e.target)) {
+                content.classList.remove('show');
+            }
+        });
 
         // Initialize state on page load
         window.addEventListener('load', () => {
