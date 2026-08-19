@@ -643,6 +643,10 @@
             }
         }
 
+        .print-scheme-indicator {
+            display: none;
+        }
+
         .print-btn {
             margin-top: 12px;
             width: 100%;
@@ -742,6 +746,18 @@
             .day-title, .day-number, .detail-title {
                 color: #1e293b !important;
             }
+            .print-scheme-indicator {
+                display: block !important;
+                font-size: 15px !important;
+                font-weight: 700 !important;
+                color: #0f766e !important;
+                background: #f0fdf4 !important;
+                border: 1px solid #bbf7d0 !important;
+                padding: 6px 12px !important;
+                border-radius: 6px !important;
+                margin-top: 8px !important;
+                margin-bottom: 12px !important;
+            }
             .quick-info, .alert-banner {
                 page-break-inside: avoid !important;
                 background: #f8fafc !important;
@@ -768,7 +784,8 @@
         <div class="sidebar-header">
             <h1>2026 北疆自駕深度遊</h1>
             <p>9月2日 － 9月12日 專屬互動行程地圖</p>
-            <button class="print-btn" onclick="window.print()">🖨️ 匯出 PDF 行程表 / 列印紙本</button>
+            <div id="print-scheme-indicator" class="print-scheme-indicator">列印版本：【方案 A：主案（過夜克拉瑪依）】</div>
+            <button class="print-btn" onclick="window.print()">🖨️ 匯出 PDF / 列印紙本（隨切換方案自動更新）</button>
         </div>
 
         <div class="sidebar-content">
@@ -2000,18 +2017,21 @@
             const btnA = document.getElementById('scheme-a-btn');
             const btnB = document.getElementById('scheme-b-btn');
 
+            const indicator = document.getElementById('print-scheme-indicator');
             if (scheme === 'A') {
                 btnA.classList.add('active');
                 btnB.classList.remove('active');
                 document.querySelectorAll('.scheme-a-card').forEach(el => el.style.display = 'block');
                 document.querySelectorAll('.scheme-b-card').forEach(el => el.style.display = 'none');
                 routesData = routesDataA;
+                if (indicator) indicator.innerText = '列印版本：【方案 A：主案（過夜克拉瑪依）】';
             } else {
                 btnA.classList.remove('active');
                 btnB.classList.add('active');
                 document.querySelectorAll('.scheme-a-card').forEach(el => el.style.display = 'none');
                 document.querySelectorAll('.scheme-b-card').forEach(el => el.style.display = 'block');
                 routesData = routesDataB;
+                if (indicator) indicator.innerText = '列印版本：【方案 B：備案（直奔布爾津・五彩灘日落）】';
             }
 
             redrawPolylines();
